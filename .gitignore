@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+
+# Generated reports and exports. These are derived from a live inventory and
+# may contain organisation-specific ticket references; they are never tracked.
+reports/
+*-report.json
+*-report.html
+*-report.md
+*-export.csv
+
+# Terraform (automation targets are rendered from templates)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform.lock.hcl
+*.auto.tfvars
+terraform.tfvars
+
+# Local tooling
+.env
+.DS_Store
+.idea/
+.vscode/

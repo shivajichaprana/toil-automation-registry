@@ -1,0 +1,6 @@
+# Validation and test tooling. Runtime collectors declare their own
+# dependencies; nothing here is required to read or edit the registry by hand.
+jsonschema>=4.17,<5
+pytest>=7.4,<9
+mypy>=1.8,<2
+ruff>=0.5,<1
