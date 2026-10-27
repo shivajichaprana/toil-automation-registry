@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "legacy-ledger-row-correction",
+  "title": "Hand correction of rows in the retired ledger store",
+  "summary": "The retired ledger store still serves historical queries and occasionally returns a row that a reconciliation report flags as inconsistent. Correcting it means a reviewed write against a store whose schema is undocumented and whose only remaining writer is a hand-issued statement. Each correction is reviewed by a second engineer before it is applied.",
+  "category": "data-correction",
+  "owner": {
+    "team": "finance-systems",
+    "service": "legacy-ledger",
+    "escalation": "finance-systems lead"
+  },
+  "trigger": "ticket",
+  "qualities": {
+    "manual": true,
+    "repetitive": true,
+    "automatable": false,
+    "no_enduring_value": true,
+    "interrupt_driven": true,
+    "scales_with_service": false
+  },
+  "frequency": {
+    "count": 1,
+    "per": "month",
+    "basis": "estimated",
+    "notes": "No reliable query exists against this store, so the rate is an engineer's estimate and is labelled as one. Occurrences are expected to fall to zero when the store is decommissioned rather than to be automated away."
+  },
+  "cost": {
+    "handling_minutes": {"p50": 35, "p90": 90, "max": 150},
+    "responders": 2,
+    "context_switch_minutes": 15,
+    "out_of_hours_fraction": 0,
+    "requires_privileged_access": true,
+    "blocks_delivery": false,
+    "basis": "estimated"
+  },
+  "automation": {
+    "state": "wont-automate",
+    "rationale": "The store is scheduled for decommission once the historical query path moves to the replacement ledger. Automating a write path into a store that is being removed would add a privileged writer to a system whose schema nobody owns, and the automation would be retired before it had paid back. The load is accepted and tracked against the decommission instead.",
+    "decided_on": "2026-09-18",
+    "runbook": "runbooks/legacy-ledger-row-correction.md",
+    "owner": "finance-systems"
+  },
+  "evidence": [
+    {
+      "kind": "manual-sample",
+      "ref": "reconciliation report exceptions: legacy-ledger inconsistent rows",
+      "observed_from": "2026-04-01",
+      "observed_to": "2026-09-30",
+      "sample_size": 6
+    }
+  ],
+  "review": {
+    "last_reviewed": "2026-09-18",
+    "cadence_days": 90,
+    "reviewer": "finance-systems"
+  },
+  "tags": ["legacy", "accepted-load", "decommission-tracked"]
+}

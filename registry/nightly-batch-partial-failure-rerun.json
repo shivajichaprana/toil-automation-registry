@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "nightly-batch-partial-failure-rerun",
+  "title": "Rerun of the overnight settlement batch after a partial failure",
+  "summary": "The settlement batch fails part way through when an upstream feed arrives late or malformed. The responder identifies the last successfully processed partition from the job log, truncates the partial output, and reruns the batch from that partition. Downstream reporting is blocked until the rerun completes, so the work is done immediately whatever the hour.",
+  "category": "queue-and-job-recovery",
+  "owner": {
+    "team": "data-platform",
+    "service": "settlement-batch",
+    "escalation": "data-platform on-call"
+  },
+  "trigger": "alert",
+  "qualities": {
+    "manual": true,
+    "repetitive": true,
+    "automatable": true,
+    "no_enduring_value": true,
+    "interrupt_driven": true,
+    "scales_with_service": false
+  },
+  "frequency": {
+    "count": 2.5,
+    "per": "week",
+    "basis": "sampled",
+    "window_days": 56,
+    "source": "alert-rule firings: settlement-batch partial failure, sampled over two reporting periods",
+    "seasonal": false,
+    "notes": "Occurrence count tracks upstream feed reliability rather than this service's own traffic, which is why it is not marked as scaling with the service."
+  },
+  "cost": {
+    "handling_minutes": {"p50": 18, "p90": 55, "max": 180},
+    "responders": 1,
+    "context_switch_minutes": 15,
+    "out_of_hours_fraction": 0.6,
+    "requires_privileged_access": true,
+    "blocks_delivery": true,
+    "basis": "sampled",
+    "source": "responder handover notes for the sampled occurrences"
+  },
+  "automation": {
+    "state": "in-progress",
+    "build_hours": {"p50": 80, "p90": 140},
+    "residual_fraction": 0.25,
+    "runbook": "runbooks/settlement-batch-rerun.md",
+    "owner": "data-platform"
+  },
+  "evidence": [
+    {
+      "kind": "alert-rule",
+      "ref": "alert-rule: settlement-batch-partial-failure",
+      "observed_from": "2026-08-03",
+      "observed_to": "2026-09-27",
+      "sample_size": 20
+    },
+    {
+      "kind": "chat-thread",
+      "ref": "handover notes: data-platform on-call channel, settlement rerun threads",
+      "observed_from": "2026-08-03",
+      "observed_to": "2026-09-27",
+      "sample_size": 20
+    }
+  ],
+  "review": {
+    "last_reviewed": "2026-10-14",
+    "cadence_days": 60,
+    "reviewer": "data-platform"
+  },
+  "tags": ["batch", "out-of-hours", "blocks-others"]
+}

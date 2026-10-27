@@ -38,9 +38,16 @@ automating:
 
 None of that is recoverable from "ten hours a year". So the schema requires
 frequency and per-occurrence cost as **separate** fields and refuses an
-aggregate total. Every derived figure — annual load, payback period, rank — is
+aggregate total — `additionalProperties` is closed, so a hand-rolled
+`hours_per_month` key fails validation rather than quietly becoming the number
+everyone quotes. Every derived figure — annual load, payback period, rank — is
 computed from those inputs at read time, which also means a corrected input
 re-derives every figure that depended on it.
+
+Both items above are in `registry/`. Run `tools/validate_registry.py --summary`
+and the two lines that looked identical come out at **11 and 47 engineer-hours
+a year**, a factor of four, entirely from the interrupt count and the share of
+occurrences handled out of hours.
 
 ## A total is an interval
 
@@ -59,16 +66,79 @@ bracket and say which one they picked.
 ## Layout
 
 ```
-schema/      normative JSON Schema for a registry entry
-registry/    one file per inventory item, validated in CI
-tools/       validation and normalisation entry points
+schema/toil.schema.json     normative contract for a registry entry
+registry/                   one file per inventory item, validated in CI
+tools/validate_registry.py  validation, invariants, and annual normalisation
 ```
+
+## Quick start
+
+```bash
+python3 -m pip install -r requirements-dev.txt
+python3 tools/validate_registry.py --summary
+```
+
+The validator does three separable jobs. It checks every entry against the
+schema; it then checks the constraints a JSON Schema cannot express — that
+`p90` is not below `p50`, that a filename matches the `id` inside it, that no
+two entries claim the same id; and it derives the annual load. It exits
+non-zero on any error, which is what the pipeline gates on. `--strict` promotes
+warnings to failures, `--json` emits the same result for a machine, and
+`--summary` prints the derived load so that a change to an input is visible as
+a change to the number it drives.
+
+One check is aimed at the tooling rather than the data: the validator
+substitutes defaults for omitted cost fields, and it refuses to run if those
+constants have drifted from the defaults the schema declares. A silent
+divergence there would recost every entry that omits a field, and nothing
+downstream would notice.
+
+## How the annual figure is derived
+
+```
+occurrences          = count × periods_per_year
+per_occurrence_min   = (handling_minutes + context_switch_minutes) × responders
+annual_minutes       = occurrences × per_occurrence_min × out_of_hours_weight
+out_of_hours_weight  = 1 + out_of_hours_fraction × (multiplier − 1)
+```
+
+Two of those terms are policy, not measurement, and the repository says so
+rather than burying them:
+
+- **The context switch is charged per responder per occurrence**, at a flat 15
+  minutes. This is the term that makes a frequent, short item expensive, and it
+  is the same for every entry so that entries stay comparable.
+- **The out-of-hours multiplier is 1.5.** It asserts that a minute at 03:00
+  costs half again what the same minute costs at 15:00, in recovery and in
+  error rate. One number, declared once, for a reviewer to argue with.
+
+Both are stated in the schema and asserted by the validator, so disagreeing
+with them means changing them in one place and watching every derived figure
+move.
+
+## Adding an item
+
+Copy the closest existing entry in `registry/`, rename the file to the new
+item's `id`, and keep these rules in mind — they are the ones the validator
+enforces and the ones reviewers reject pull requests over:
+
+1. **The filename stem must equal the `id`.** The registry is addressed by id;
+   a mismatch makes an entry unfindable from a report that cites it.
+2. **State a basis for every number.** `estimated` is an acceptable answer and
+   a normal starting point. Claiming `measured` without a `window_days` and a
+   `source` is rejected: a count without a window is not a rate.
+3. **An item must be manual and repetitive to belong here.** One-off remedial
+   work is an incident record, not toil, and filing it here inflates the
+   inventory while making it less useful.
+4. **`wont-automate` is a real, reviewable state.** It requires a written
+   rationale and a decision date. An inventory where nothing can be closed
+   stops being an inventory and becomes a backlog.
 
 ## Status
 
-Early. The repository scaffold is in place; the normative schema, the validated
-inventory, measurement collectors, candidate ranking and runbook conversion
-land next.
+Early. The schema, the validated inventory and the normalisation it supports
+are in place; measurement collectors, candidate ranking with payback estimates,
+and runbook-to-automation conversion land next.
 
 ## Licence
 

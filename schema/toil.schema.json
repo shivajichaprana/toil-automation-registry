@@ -1,0 +1,415 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/shivajichaprana/toil-automation-registry/main/schema/toil.schema.json",
+  "title": "Toil inventory item",
+  "description": "A single unit of operational toil, recorded as reviewable inputs rather than as a pre-multiplied total. Frequency and per-occurrence cost are separate required objects so that annual load, automation payback and rank can be derived at read time; an aggregate such as 'hours per month' is deliberately not representable, because the occurrence count cannot be recovered from it and the occurrence count is what drives both the real cost of an interrupt and the payback of automating it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "title",
+    "summary",
+    "category",
+    "owner",
+    "trigger",
+    "qualities",
+    "frequency",
+    "cost",
+    "automation",
+    "evidence",
+    "review"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "description": "Entry format version. Bumped only for a breaking change, so a reader can refuse an entry it does not understand instead of misinterpreting it."
+    },
+    "id": {
+      "$ref": "#/$defs/slug",
+      "description": "Stable identifier, equal to the filename stem. Reports, dashboards and automation references cite the id, so an item is retired rather than renamed."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 120,
+      "description": "Short human label. Free to reword; carries no identity."
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 600,
+      "description": "What the handler actually does, in enough detail that a reader who has never done it can tell whether it is the same work as another entry."
+    },
+    "category": {
+      "description": "Taxonomy slot. Categories describe the work, not the team that happens to absorb it, so the same category spans services.",
+      "enum": [
+        "access-management",
+        "capacity-change",
+        "certificate-and-key-rotation",
+        "data-correction",
+        "deploy-support",
+        "environment-provisioning",
+        "incident-triage",
+        "monitoring-maintenance",
+        "queue-and-job-recovery",
+        "reporting-and-audit",
+        "request-fulfilment",
+        "upgrade-and-patching"
+      ]
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["team", "service"],
+      "properties": {
+        "team": {
+          "$ref": "#/$defs/slug",
+          "description": "Team that absorbs the load today. Not necessarily the team that would build the automation."
+        },
+        "service": {
+          "$ref": "#/$defs/slug",
+          "description": "Service or system the work is performed against."
+        },
+        "escalation": {
+          "type": "string",
+          "minLength": 3,
+          "description": "Routing target used when the handler cannot complete the work."
+        }
+      }
+    },
+    "trigger": {
+      "description": "What causes an occurrence. A scheduled obligation and a reactive interrupt need different interventions even at identical cost, so the trigger is recorded rather than inferred from the category.",
+      "enum": [
+        "alert",
+        "ticket",
+        "human-request",
+        "scheduled",
+        "deploy",
+        "release-gate",
+        "audit",
+        "vendor-notification"
+      ]
+    },
+    "qualities": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The properties that make work toil, recorded one by one rather than collapsed into a single judgement, so that a disagreement can be located.",
+      "required": [
+        "manual",
+        "repetitive",
+        "automatable",
+        "no_enduring_value",
+        "interrupt_driven",
+        "scales_with_service"
+      ],
+      "properties": {
+        "manual": {
+          "type": "boolean",
+          "description": "A person performs the steps. Work a machine already performs is not toil however tedious it looks."
+        },
+        "repetitive": {
+          "type": "boolean",
+          "description": "The same procedure recurs. One-off remedial work belongs in an incident record, not in this inventory."
+        },
+        "automatable": {
+          "type": "boolean",
+          "description": "A machine could perform it, given effort. Being automatable says nothing about whether automating it is worth the cost; that is the automation block's question."
+        },
+        "no_enduring_value": {
+          "type": "boolean",
+          "description": "Completing an occurrence leaves the service no better than before. The occurrence restores a state; it does not improve one."
+        },
+        "interrupt_driven": {
+          "type": "boolean",
+          "description": "An occurrence arrives unscheduled and displaces planned work. This is the quality the context-switch charge prices."
+        },
+        "scales_with_service": {
+          "type": "boolean",
+          "description": "Occurrence count grows with traffic, tenants or fleet size. Work that does not scale will not get worse on its own, which lowers its priority relative to work that will."
+        }
+      }
+    },
+    "frequency": {
+      "$ref": "#/$defs/frequency"
+    },
+    "cost": {
+      "$ref": "#/$defs/cost"
+    },
+    "automation": {
+      "$ref": "#/$defs/automation"
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Reproducible pointers behind the numbers above. At least one is required even when the basis is an estimate, in which case it names the sample the estimate came from.",
+      "items": {
+        "$ref": "#/$defs/evidenceItem"
+      }
+    },
+    "review": {
+      "$ref": "#/$defs/review"
+    },
+    "tags": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 12,
+      "items": {
+        "$ref": "#/$defs/slug"
+      }
+    },
+    "links": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "url"],
+        "properties": {
+          "title": {"type": "string", "minLength": 3},
+          "url": {"type": "string", "format": "uri", "minLength": 7}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "minLength": 2,
+      "maxLength": 64
+    },
+    "isoDate": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "basis": {
+      "description": "How a number was arrived at. 'estimated' is an acceptable and normal starting point; what is not acceptable is an estimate wearing the label of a measurement.",
+      "enum": ["measured", "sampled", "estimated"]
+    },
+    "minuteSpread": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["p50", "p90"],
+      "description": "Handling time as a spread rather than a mean. Handling time is right-skewed, so a mean is dragged by a few pathological occurrences while a median hides them; both ends are kept and derived totals are reported as a bracket. Ordering is enforced by the validator, which is a cross-sibling constraint JSON Schema cannot state.",
+      "properties": {
+        "p50": {"type": "number", "exclusiveMinimum": 0, "description": "Median minutes per occurrence."},
+        "p90": {"type": "number", "exclusiveMinimum": 0, "description": "Ninetieth-percentile minutes per occurrence."},
+        "max": {"type": "number", "exclusiveMinimum": 0, "description": "Worst observed occurrence, when one is known. Not used in derived totals; present so a reviewer can see the tail that a percentile truncates."}
+      }
+    },
+    "frequency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count", "per", "basis"],
+      "description": "How often an occurrence happens, stated in the period it was observed in. Never pre-multiplied into a longer period: annualising is a derivation, and a derivation that is stored cannot be corrected when its input changes.",
+      "properties": {
+        "count": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Occurrences per period named by 'per'."
+        },
+        "per": {
+          "enum": ["day", "week", "month", "quarter", "year"]
+        },
+        "basis": {"$ref": "#/$defs/basis"},
+        "window_days": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Length of the observation window the count came from. Required when the basis is measured or sampled: a count without a window is not a rate."
+        },
+        "source": {
+          "type": "string",
+          "minLength": 4,
+          "description": "How to reproduce the count: a saved ticket query, an alert rule name, a dashboard panel."
+        },
+        "seasonal": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when the rate varies materially across the year, which makes any single annualised figure a weaker claim and should be read alongside the bracket."
+        },
+        "notes": {"type": "string", "maxLength": 600}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"basis": {"enum": ["measured", "sampled"]}},
+            "required": ["basis"]
+          },
+          "then": {"required": ["window_days", "source"]}
+        }
+      ]
+    },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["handling_minutes", "basis"],
+      "description": "Cost of a single occurrence. Kept per-occurrence so that two items with equal annual totals but different occurrence counts remain distinguishable, which is the distinction that decides which one to automate first.",
+      "properties": {
+        "handling_minutes": {"$ref": "#/$defs/minuteSpread"},
+        "responders": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "People engaged per occurrence. Handling time and the context-switch charge apply per responder."
+        },
+        "context_switch_minutes": {
+          "type": "number",
+          "minimum": 0,
+          "default": 15,
+          "description": "Overhead charged once per responder per occurrence for leaving and resuming planned work. A policy constant rather than a measurement: it is the same for every entry so that comparisons between entries remain meaningful, and it is stated here rather than buried in a report so that a reviewer can argue with the figure."
+        },
+        "out_of_hours_fraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0,
+          "description": "Share of occurrences handled outside working hours. Weighted upward in derived load by a stated multiplier, representing the recovery cost that a minute at 03:00 carries and a minute at 15:00 does not."
+        },
+        "requires_privileged_access": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when handling needs production write or break-glass access. This narrows the set of people who can absorb the load and adds an audit obligation per occurrence, so it raises priority independently of minutes."
+        },
+        "blocks_delivery": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when somebody outside the handling team waits on the occurrence. The cost then exceeds the responder's minutes and the minutes alone understate it."
+        },
+        "basis": {"$ref": "#/$defs/basis"},
+        "source": {"type": "string", "minLength": 4}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"basis": {"enum": ["measured", "sampled"]}},
+            "required": ["basis"]
+          },
+          "then": {"required": ["source"]}
+        }
+      ]
+    },
+    "automation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "description": "Where this item stands against being automated away. 'wont-automate' is a first-class, dated, reasoned state: an inventory in which nothing can be closed stops being an inventory and becomes a backlog that everybody learns to ignore.",
+      "properties": {
+        "state": {
+          "enum": [
+            "not-assessed",
+            "candidate",
+            "planned",
+            "in-progress",
+            "automated",
+            "wont-automate"
+          ]
+        },
+        "build_hours": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["p50", "p90"],
+          "description": "Engineering effort to build, land and operate the automation, as a spread. Payback is computed against both ends, because a build estimate is the least reliable number in the entry.",
+          "properties": {
+            "p50": {"type": "number", "exclusiveMinimum": 0},
+            "p90": {"type": "number", "exclusiveMinimum": 0}
+          }
+        },
+        "residual_fraction": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Share of the original load that survives automation: exceptions a machine hands back, review of automated runs, and maintenance of the automation itself. Zero is almost never the honest answer, and an entry claiming it should expect to be challenged."
+        },
+        "runbook": {
+          "type": "string",
+          "minLength": 3,
+          "description": "Repository-relative path or URL of the manual procedure followed today. The input to conversion: a procedure nobody wrote down cannot be converted, only reinvented."
+        },
+        "implementation": {
+          "type": "string",
+          "minLength": 3,
+          "description": "Where the automation lives, once it exists."
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 20,
+          "description": "Required when the state is 'wont-automate': why the load is being accepted rather than removed."
+        },
+        "decided_on": {"$ref": "#/$defs/isoDate"},
+        "owner": {
+          "$ref": "#/$defs/slug",
+          "description": "Team accountable for the automation work, which is often not the team absorbing the toil."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"state": {"const": "wont-automate"}},
+            "required": ["state"]
+          },
+          "then": {"required": ["rationale", "decided_on"]}
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {"enum": ["candidate", "planned", "in-progress", "automated"]}
+            },
+            "required": ["state"]
+          },
+          "then": {"required": ["build_hours", "residual_fraction"]}
+        },
+        {
+          "if": {
+            "properties": {"state": {"const": "automated"}},
+            "required": ["state"]
+          },
+          "then": {"required": ["implementation"]}
+        }
+      ]
+    },
+    "evidenceItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref", "observed_from", "observed_to"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "ticket-query",
+            "alert-rule",
+            "chat-thread",
+            "audit-log",
+            "time-tracking",
+            "manual-sample",
+            "change-record"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 3,
+          "description": "A pointer somebody else can follow: a saved query name, a rule identifier, a document path. Not a screenshot, and not a recollection."
+        },
+        "observed_from": {"$ref": "#/$defs/isoDate"},
+        "observed_to": {"$ref": "#/$defs/isoDate"},
+        "sample_size": {"type": "integer", "minimum": 1}
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["last_reviewed", "cadence_days", "reviewer"],
+      "description": "When this entry was last confirmed against reality. A measured entry decays into an estimate as soon as the window it was measured over stops resembling the present, and an inventory nobody revisits decays quietly into fiction.",
+      "properties": {
+        "last_reviewed": {"$ref": "#/$defs/isoDate"},
+        "cadence_days": {
+          "type": "integer",
+          "minimum": 7,
+          "maximum": 366,
+          "description": "How often this entry must be revisited. Short for volatile, high-frequency work; long for stable scheduled obligations."
+        },
+        "reviewer": {"$ref": "#/$defs/slug"}
+      }
+    }
+  }
+}

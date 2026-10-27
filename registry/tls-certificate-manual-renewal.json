@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "tls-certificate-manual-renewal",
+  "title": "Manual TLS certificate renewal for edge listeners",
+  "summary": "Four edge listeners hold certificates issued by an external authority that the platform does not integrate with. Each renewal means raising a request with the authority, waiting for issuance, uploading the chain to the certificate store, updating the listener reference and confirming the new chain serves correctly from outside the network.",
+  "category": "certificate-and-key-rotation",
+  "owner": {
+    "team": "edge-platform",
+    "service": "public-edge",
+    "escalation": "edge-platform primary responder"
+  },
+  "trigger": "scheduled",
+  "qualities": {
+    "manual": true,
+    "repetitive": true,
+    "automatable": true,
+    "no_enduring_value": true,
+    "interrupt_driven": false,
+    "scales_with_service": true
+  },
+  "frequency": {
+    "count": 4,
+    "per": "year",
+    "basis": "measured",
+    "window_days": 365,
+    "source": "change-record query: edge listener certificate updates",
+    "seasonal": false,
+    "notes": "One renewal per listener. Occurrence count tracks listener count, so onboarding a region adds an occurrence rather than lengthening an existing one."
+  },
+  "cost": {
+    "handling_minutes": {"p50": 150, "p90": 240, "max": 420},
+    "responders": 1,
+    "context_switch_minutes": 15,
+    "out_of_hours_fraction": 0,
+    "requires_privileged_access": true,
+    "blocks_delivery": false,
+    "basis": "measured",
+    "source": "time-tracking entries against the certificate renewal change records"
+  },
+  "automation": {
+    "state": "candidate",
+    "build_hours": {"p50": 24, "p90": 60},
+    "residual_fraction": 0.1,
+    "runbook": "runbooks/edge-certificate-renewal.md",
+    "owner": "edge-platform"
+  },
+  "evidence": [
+    {
+      "kind": "change-record",
+      "ref": "change-record query: service=public-edge, type=certificate-update",
+      "observed_from": "2025-10-01",
+      "observed_to": "2026-09-30",
+      "sample_size": 4
+    },
+    {
+      "kind": "time-tracking",
+      "ref": "time-tracking export: edge-platform, category=certificate-and-key-rotation",
+      "observed_from": "2025-10-01",
+      "observed_to": "2026-09-30",
+      "sample_size": 4
+    }
+  ],
+  "review": {
+    "last_reviewed": "2026-10-05",
+    "cadence_days": 180,
+    "reviewer": "edge-platform"
+  },
+  "tags": ["edge", "certificates", "scheduled-obligation"]
+}

@@ -1,0 +1,35 @@
+# Tool configuration only. The registry is data and the tooling is a set of
+# entry points, so nothing here is packaged or published; pinning the settings
+# in the repository keeps a local run and a pipeline run from disagreeing about
+# what counts as a lint failure.
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ANN", "RET", "PL", "FURB"]
+ignore = [
+  # Positional-argument count is a poor proxy for complexity in a check
+  # function that takes an entry and a validator.
+  "PLR0913",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests name their fixtures freely and assert without annotations.
+"tests/*" = ["ANN", "PLR2004"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unreachable = true
+pretty = true
+
+[[tool.mypy.overrides]]
+# jsonschema ships no type information; its surface here is two symbols.
+module = "jsonschema.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

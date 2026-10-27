@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "production-readonly-access-grant",
+  "title": "Time-bound read-only production access grants",
+  "summary": "An engineer requests read-only access to a production account to investigate a customer report. A platform operator checks the stated reason against the access policy, attaches the engineer to the read-only role for a bounded period and records the grant in the audit log. Most requests are routine and approved unchanged.",
+  "category": "access-management",
+  "owner": {
+    "team": "platform-security",
+    "service": "identity",
+    "escalation": "platform-security on-call"
+  },
+  "trigger": "ticket",
+  "qualities": {
+    "manual": true,
+    "repetitive": true,
+    "automatable": true,
+    "no_enduring_value": true,
+    "interrupt_driven": true,
+    "scales_with_service": true
+  },
+  "frequency": {
+    "count": 6,
+    "per": "week",
+    "basis": "measured",
+    "window_days": 120,
+    "source": "saved ticket query: access-request, scope=production-readonly",
+    "seasonal": false
+  },
+  "cost": {
+    "handling_minutes": {"p50": 7, "p90": 15, "max": 50},
+    "responders": 1,
+    "context_switch_minutes": 15,
+    "out_of_hours_fraction": 0.05,
+    "requires_privileged_access": true,
+    "blocks_delivery": true,
+    "basis": "measured",
+    "source": "ticket first-touch to resolution timestamps on the same saved query"
+  },
+  "automation": {
+    "state": "planned",
+    "build_hours": {"p50": 60, "p90": 120},
+    "residual_fraction": 0.2,
+    "runbook": "runbooks/production-readonly-grant.md",
+    "owner": "platform-security"
+  },
+  "evidence": [
+    {
+      "kind": "ticket-query",
+      "ref": "saved ticket query: access-request-production-readonly",
+      "observed_from": "2026-06-01",
+      "observed_to": "2026-09-28",
+      "sample_size": 103
+    },
+    {
+      "kind": "audit-log",
+      "ref": "identity audit log: role attachment events, read-only production role",
+      "observed_from": "2026-06-01",
+      "observed_to": "2026-09-28",
+      "sample_size": 103
+    }
+  ],
+  "review": {
+    "last_reviewed": "2026-10-09",
+    "cadence_days": 90,
+    "reviewer": "platform-security"
+  },
+  "tags": ["identity", "request-queue", "blocks-others"]
+}

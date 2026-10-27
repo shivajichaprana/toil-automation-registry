@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "stuck-queue-manual-drain",
+  "title": "Manual drain of the stalled notification queue",
+  "summary": "A sustained queue-depth alert fires when consumer lag passes its threshold. The responder confirms consumers are healthy, identifies the poison message from the consumer error log, moves it to the parked queue by hand and releases the consumer group. The procedure is well understood and almost always identical.",
+  "category": "queue-and-job-recovery",
+  "owner": {
+    "team": "messaging",
+    "service": "notification-dispatch",
+    "escalation": "messaging primary responder"
+  },
+  "trigger": "alert",
+  "qualities": {
+    "manual": true,
+    "repetitive": true,
+    "automatable": true,
+    "no_enduring_value": true,
+    "interrupt_driven": true,
+    "scales_with_service": true
+  },
+  "frequency": {
+    "count": 10,
+    "per": "month",
+    "basis": "measured",
+    "window_days": 90,
+    "source": "alert-rule firings: notification-dispatch consumer lag sustained",
+    "seasonal": true,
+    "notes": "Rate roughly doubles during campaign periods. The annualised figure is therefore a weaker claim for this entry than for the scheduled obligations, and the bracket should be read rather than the midpoint."
+  },
+  "cost": {
+    "handling_minutes": {"p50": 5, "p90": 22, "max": 95},
+    "responders": 1,
+    "context_switch_minutes": 15,
+    "out_of_hours_fraction": 0.35,
+    "requires_privileged_access": true,
+    "blocks_delivery": false,
+    "basis": "sampled",
+    "source": "manual timing of 18 occurrences recorded by the handling responder"
+  },
+  "automation": {
+    "state": "candidate",
+    "build_hours": {"p50": 40, "p90": 90},
+    "residual_fraction": 0.15,
+    "runbook": "runbooks/notification-queue-drain.md",
+    "owner": "messaging"
+  },
+  "evidence": [
+    {
+      "kind": "alert-rule",
+      "ref": "alert-rule: notification-dispatch-consumer-lag-sustained",
+      "observed_from": "2026-07-01",
+      "observed_to": "2026-09-29",
+      "sample_size": 31
+    },
+    {
+      "kind": "manual-sample",
+      "ref": "handling-time sample: messaging responder log, queue drain occurrences",
+      "observed_from": "2026-08-01",
+      "observed_to": "2026-09-29",
+      "sample_size": 18
+    }
+  ],
+  "review": {
+    "last_reviewed": "2026-10-12",
+    "cadence_days": 90,
+    "reviewer": "messaging"
+  },
+  "tags": ["messaging", "interrupt", "high-frequency"]
+}

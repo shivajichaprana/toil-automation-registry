@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": "quarterly-access-review-evidence-pack",
+  "title": "Assembly of the periodic access review evidence pack",
+  "summary": "Each review period an auditor requests evidence that production access was granted and revoked according to policy. Three engineers export role attachments, reconcile them against approved requests, chase the unmatched entries and assemble the result into the required format. The procedure does not change between periods; only the data does.",
+  "category": "reporting-and-audit",
+  "owner": {
+    "team": "platform-security",
+    "service": "identity",
+    "escalation": "platform-security lead"
+  },
+  "trigger": "audit",
+  "qualities": {
+    "manual": true,
+    "repetitive": true,
+    "automatable": true,
+    "no_enduring_value": true,
+    "interrupt_driven": false,
+    "scales_with_service": true
+  },
+  "frequency": {
+    "count": 4,
+    "per": "year",
+    "basis": "measured",
+    "window_days": 365,
+    "source": "audit schedule: periodic access review obligations",
+    "seasonal": false
+  },
+  "cost": {
+    "handling_minutes": {"p50": 420, "p90": 600, "max": 900},
+    "responders": 3,
+    "context_switch_minutes": 15,
+    "out_of_hours_fraction": 0,
+    "requires_privileged_access": false,
+    "blocks_delivery": false,
+    "basis": "measured",
+    "source": "time-tracking export: platform-security, category=reporting-and-audit"
+  },
+  "automation": {
+    "state": "candidate",
+    "build_hours": {"p50": 120, "p90": 200},
+    "residual_fraction": 0.3,
+    "runbook": "runbooks/access-review-evidence-pack.md",
+    "owner": "platform-security"
+  },
+  "evidence": [
+    {
+      "kind": "time-tracking",
+      "ref": "time-tracking export: platform-security access review periods",
+      "observed_from": "2025-10-01",
+      "observed_to": "2026-09-30",
+      "sample_size": 4
+    }
+  ],
+  "review": {
+    "last_reviewed": "2026-10-02",
+    "cadence_days": 180,
+    "reviewer": "platform-security"
+  },
+  "tags": ["audit", "identity", "multi-responder"]
+}
