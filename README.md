@@ -68,6 +68,7 @@ bracket and say which one they picked.
 ```
 schema/toil.schema.json     normative contract for a registry entry
 registry/                   one file per inventory item, validated in CI
+collectors/                 derive frequency and cost from operational exports
 tools/validate_registry.py  validation, invariants, and annual normalisation
 ```
 
@@ -116,6 +117,40 @@ Both are stated in the schema and asserted by the validator, so disagreeing
 with them means changing them in one place and watching every derived figure
 move.
 
+## Where the numbers come from
+
+Typing the numbers in by hand is how an estimate ends up labelled as a
+measurement, so `collectors/` derives them from an export instead and fills the
+window, the source and the basis from what the export actually contained:
+
+```bash
+python3 -m collectors.tickets \
+  --export exports/ops-queue.ndjson --id stuck-queue-manual-drain \
+  --from 2026-07-01 --to 2026-09-29 --source 'saved query: OPS toil' \
+  --queue OPS --require-label toil --utc-offset-minutes 330 \
+  --apply registry/stuck-queue-manual-drain.json
+```
+
+The collectors are where this repository's opinions about measurement live, and
+each of them exists because the obvious reading of a source is wrong:
+
+- **Resolution time is not handling time.** A ticket open for three days
+  consumed twenty minutes of somebody's attention and three days of queue wait.
+  Handling time comes from a worklog, or from first response to resolution, or
+  from nothing — never from a ticket's lifetime unless that is asked for
+  explicitly.
+- **A firing is not an occurrence.** Flapping alerts are folded into single
+  interruptions, and firings that cleared themselves without an
+  acknowledgement are dropped, because they cost nobody anything and counting
+  them raises the frequency while lowering the median.
+- **A percentile needs a sample.** Below a stated sample size the upper end of
+  the spread is reported as the observed maximum, and the basis is downgraded
+  rather than the number being dressed up.
+
+See [collectors/README.md](collectors/README.md) for the full reasoning and the
+options. Collectors read files; they hold no credentials and open no network
+connections, so a measurement is reproducible from the export behind it.
+
 ## Adding an item
 
 Copy the closest existing entry in `registry/`, rename the file to the new
@@ -136,8 +171,8 @@ enforces and the ones reviewers reject pull requests over:
 
 ## Status
 
-Early. The schema, the validated inventory and the normalisation it supports
-are in place; measurement collectors, candidate ranking with payback estimates,
+The schema, the validated inventory, the normalisation it supports and the
+measurement collectors are in place. Candidate ranking with payback estimates
 and runbook-to-automation conversion land next.
 
 ## Licence
