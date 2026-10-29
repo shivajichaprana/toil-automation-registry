@@ -69,6 +69,7 @@ bracket and say which one they picked.
 schema/toil.schema.json     normative contract for a registry entry
 registry/                   one file per inventory item, validated in CI
 collectors/                 derive frequency and cost from operational exports
+ranking/                    net saving, payback interval, and the ranked shortlist
 tools/validate_registry.py  validation, invariants, and annual normalisation
 ```
 
@@ -171,9 +172,9 @@ enforces and the ones reviewers reject pull requests over:
 
 ## Status
 
-The schema, the validated inventory, the normalisation it supports and the
-measurement collectors are in place. Candidate ranking with payback estimates
-and runbook-to-automation conversion land next.
+The schema, the validated inventory, the normalisation it supports, the
+measurement collectors and the candidate ranking are in place.
+Runbook-to-automation conversion lands next.
 
 ## Licence
 
