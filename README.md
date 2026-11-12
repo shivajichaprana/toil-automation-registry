@@ -1,7 +1,7 @@
 # toil-automation-registry
 
 Toil inventory as code: measurement, ranked automation candidates, runbook
-conversion, reduction tracking.
+conversion, and a method for measuring how much manual work remains.
 
 Most toil inventories are a spreadsheet of guesses that nobody revisits. This
 repository treats the inventory as a reviewed artefact instead: every item is a
@@ -65,20 +65,44 @@ bracket and say which one they picked.
 
 ## Layout
 
+```text
+ticket or alert export -> collectors -> registry entries -> validation -> ranking
+                                            |
+                                            +-> reviewed diagnostic procedure
+                                                  -> SSM Automation JSON
 ```
-schema/toil.schema.json     normative contract for a registry entry
-registry/                   one file per inventory item, validated in CI
-collectors/                 derive frequency and cost from operational exports
-ranking/                    net saving, payback interval, and the ranked shortlist
-tools/validate_registry.py  validation, invariants, and annual normalisation
-```
+
+- [Schema](schema/toil.schema.json) and [registry](registry/) define and store the inventory.
+- [Collectors](collectors/) derive frequency and handling cost from local exports.
+- [Ranking](ranking/) compares savings, payback ranges, and candidate order.
+- [Automation](automation/) converts structured diagnostics to SSM Automation
+  JSON and provides a Terraform module for registering the reviewed documents.
+- [Tests](tests/) cover payback, ranking, and runbook conversion.
 
 ## Quick start
 
+Use Python 3.10 or newer and run these commands from the repository root.
+
 ```bash
-python3 -m pip install -r requirements-dev.txt
-python3 tools/validate_registry.py --summary
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+python tools/validate_registry.py --summary
+make rank
 ```
+
+Run `make check` before submitting a change. Use `make report` for ranking
+JSON on standard output and `make collect` to preview a measurement. For example,
+the following reads an export already filtered to the relevant tickets.
+
+```bash
+make collect COLLECTOR=tickets EXPORT=exports/ops-queue.ndjson \
+  ITEM=stuck-queue-manual-drain WINDOW_START=2026-07-01 WINDOW_END=2026-09-29 \
+  SOURCE='reviewed ticket export for queue recovery'
+```
+
+For collector-specific filters or a reviewed write back to an entry, use the
+[collector CLI](collectors/README.md).
 
 The validator does three separable jobs. It checks every entry against the
 schema; it then checks the constraints a JSON Schema cannot express — that
@@ -170,11 +194,30 @@ enforces and the ones reviewers reject pull requests over:
    rationale and a decision date. An inventory where nothing can be closed
    stops being an inventory and becomes a backlog.
 
-## Status
+## Review cadence
 
-The schema, the validated inventory, the normalisation it supports, the
-measurement collectors and the candidate ranking are in place.
-Runbook-to-automation conversion lands next.
+Use the [toil taxonomy](docs/toil-taxonomy.md) to decide what belongs in the
+inventory. At the interval in `review.cadence_days`, the named reviewer
+checks whether the source, owner, frequency, cost, and automation state are
+still accurate. Record the date of the actual review and the evidence behind
+any change. Re-run ranking before funding the next round of work. After a
+change ships, compare the remaining manual work with the baseline using the
+[measurement method](docs/measurement-method.md).
+
+## Convert a diagnostic procedure
+
+Use the structured example in [the converter](automation/convert.py) as the
+input contract. Save it as JSON and render a schema 0.3 document locally.
+
+```bash
+python -m automation.convert queue-diagnostics.json > queue-diagnostics.ssm.json
+```
+
+Review the emitted steps, target parameters, and the required
+`AutomationAssumeRole`. The converter supports reading SQS queue depth and
+EC2 instance state. The Terraform module accepts reviewed document JSON in
+`runbook_documents`, keyed by a custom SSM document name. Conversion and the
+repository's CI use files and require no AWS account.
 
 ## Licence
 
